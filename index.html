@@ -308,7 +308,7 @@ async function saveOut(name,text,box){
   try{const b=new Blob([text],{type:name.endsWith(".csv")?"text/csv;charset=utf-8":"application/json"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);box.textContent="✓ הקובץ יורד";return}catch(e){}
   box.innerHTML='ההורדה לא זמינה כאן. סמן והעתק את הטקסט:<textarea readonly rows="6"></textarea>';box.querySelector("textarea").value=text}
 function openMenu(){
-  $("sh2").innerHTML='<h2>שיתוף וגיבוי</h2><button class="qs" id="m_s">🔗 שיתוף עם בן/בת הזוג</button><button class="qs" id="m_j">⬇ הורד גיבוי (JSON)</button><button class="qs" id="m_c">⬇ ייצוא לטבלה (CSV)</button><label class="qs" style="cursor:pointer">⬆ שחזור מגיבוי<input type="file" id="m_f" accept=".json,application/json" hidden></label><div id="m_o" style="font-size:13px;color:var(--mute);margin-top:8px"></div>';
+  $("sh2").innerHTML='<h2>שיתוף וגיבוי</h2><button class="qs" id="m_s">🔗 שיתוף עם בן/בת הזוג</button><button class="qs" id="m_j">⬇ הורד גיבוי (JSON)</button><button class="qs" id="m_c">⬇ ייצוא לטבלה (CSV)</button><label class="qs" style="cursor:pointer">⬆ שחזור מגיבוי<input type="file" id="m_f" accept=".json,application/json" hidden></label><div id="m_o" style="font-size:13px;color:var(--mute);margin-top:8px"></div><div class="m" style="margin-top:10px">גרסה 3</div>';
   const o=$("m_o");
   $("m_s").onclick=openShare;
   $("m_j").onclick=()=>saveOut("new-house-backup.json",JSON.stringify({app:"nh",v:1,exported:new Date().toISOString(),tasks:S.tasks},null,1),o);
@@ -316,7 +316,8 @@ function openMenu(){
   $("m_f").onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j||!Array.isArray(j.tasks)||!j.tasks.every(t=>t&&typeof t.text==="string"&&t.id!=null&&TY[t.type]))throw 0;snap("הגיבוי שוחזר");S=norm({t:0,tasks:j.tasks});persist();$("ov2").classList.remove("on");render()}catch(x){o.textContent="הקובץ לא תקין"}};r.readAsText(f)};
   $("ov2").classList.add("on")}
 $("mn").onclick=openMenu;
-function snap(m){us=JSON.stringify(S.tasks);$("tt").textContent=m;$("toast").hidden=false;clearTimeout(tmr);tmr=setTimeout(()=>{$("toast").hidden=true},6000)}
+function note(m){$("tt").textContent=m;$("tu").style.display="none";$("toast").style.whiteSpace="normal";$("toast").style.maxWidth="85%";$("toast").hidden=false;clearTimeout(tmr);tmr=setTimeout(()=>{$("toast").hidden=true;$("tu").style.display="";$("toast").style.whiteSpace=""},14000)}
+function snap(m){us=JSON.stringify(S.tasks);$("tt").textContent=m;$("tu").style.display="";$("toast").style.whiteSpace="";$("toast").hidden=false;clearTimeout(tmr);tmr=setTimeout(()=>{$("toast").hidden=true},6000)}
 $("tu").onclick=()=>{if(us){S.tasks=JSON.parse(us);us=null;persist();render()}$("toast").hidden=true};
 function openQs(id){
   const t=S.tasks.find(x=>x.id===id);if(!t)return;
@@ -415,11 +416,11 @@ function dyn(){
       msg.textContent="✓ "+[nm,ph].filter(Boolean).join(" · ")+" (לחץ ״שמור״ כדי לשמור)"};
     if(navigator.contacts&&navigator.contacts.select){
       const b=document.createElement("button");b.className="cal";b.textContent="📇 בחר מאנשי הקשר";
-      b.onclick=async()=>{msg.textContent="…";try{const r=await navigator.contacts.select(["name","tel"],{multiple:false});
+      b.onclick=async()=>{msg.textContent="…";try{localStorage.setItem("nh_pickctx",String(Date.now()))}catch(e){}try{const r=await navigator.contacts.select(["name","tel"],{multiple:false});
         if(!r||!r.length){msg.textContent="לא נבחר איש קשר";return}
         const c=r[0],nm=((c.name&&c.name[0])||"").trim(),ph=((c.tel&&c.tel[0])||"").trim();
         if(!nm&&!ph){msg.textContent="לא התקבלו שם או טלפון מאיש הקשר";return}
-        put(nm,ph)}catch(e){msg.textContent="שגיאה: "+((e&&e.name)||"")+" "+((e&&e.message)||"")}};
+        put(nm,ph)}catch(e){msg.textContent="שגיאה: "+((e&&e.name)||"")+" "+((e&&e.message)||"")}finally{try{localStorage.removeItem("nh_pickctx")}catch(e){}}};
       box.appendChild(b)}
     const pb=document.createElement("button");pb.className="cal";pb.textContent="📋 הדבק שם וטלפון מהלוח";
     pb.onclick=async()=>{let t="";try{t=await navigator.clipboard.readText()}catch(e){t=prompt("הדבק כאן שם וטלפון")||""}
@@ -476,6 +477,7 @@ function closeEd(){
   pending=null;ed=null;render();
 }
 render();
+try{const pc=localStorage.getItem("nh_pickctx");if(pc){localStorage.removeItem("nh_pickctx");if(Date.now()-(+pc)<600000)setTimeout(()=>note("הדף נטען מחדש בזמן בחירת איש הקשר, ולכן הבחירה אבדה. אפשר להעתיק את המספר מאנשי הקשר ולהשתמש בכפתור ״הדבק שם וטלפון מהלוח״."),900)}}catch(e){}
 if(!CODE||!DB_URL)setTimeout(openSetup,500);
 connect();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
