@@ -407,12 +407,25 @@ function dyn(){
     const v=k==="trade"?ed.trade:ed.f[k];
     const inp=ty==="area"?'<textarea rows="3" data-k="'+k+'">'+esc(v)+"</textarea>":'<input data-k="'+k+'" type="'+ty+'" value="'+esc(v)+'"'+(li?' list="'+li+'"':"")+">";
     return "<label>"+l+"</label>"+inp}).join("");
-  if(navigator.contacts&&navigator.contacts.select&&FD[ed.type].some(x=>x[0]==="phone")){
-    const b=document.createElement("button");b.className="cal";b.textContent="📇 בחר מאנשי הקשר";
-    b.onclick=async()=>{try{const r=await navigator.contacts.select(["name","tel"],{multiple:false});
-      if(r&&r[0]){const n=document.querySelector('[data-k="name"]'),p=document.querySelector('[data-k="phone"]');
-        if(n&&r[0].name&&r[0].name[0])n.value=r[0].name[0];if(p&&r[0].tel&&r[0].tel[0])p.value=r[0].tel[0]}}catch(e){}};
-    $("dyn").prepend(b)}
+  if(FD[ed.type].some(x=>x[0]==="phone")){
+    const box=document.createElement("div"),msg=document.createElement("div");msg.className="m";msg.style.margin="6px 0";
+    const put=(nm,ph)=>{const n=$("dyn").querySelector('[data-k="name"]'),p=$("dyn").querySelector('[data-k="phone"]');
+      if(ph&&p){p.value=ph;p.dispatchEvent(new Event("change",{bubbles:true}))}
+      if(nm&&n){n.value=nm;n.dispatchEvent(new Event("change",{bubbles:true}))}
+      msg.textContent="✓ "+[nm,ph].filter(Boolean).join(" · ")+" (לחץ ״שמור״ כדי לשמור)"};
+    if(navigator.contacts&&navigator.contacts.select){
+      const b=document.createElement("button");b.className="cal";b.textContent="📇 בחר מאנשי הקשר";
+      b.onclick=async()=>{msg.textContent="…";try{const r=await navigator.contacts.select(["name","tel"],{multiple:false});
+        if(!r||!r.length){msg.textContent="לא נבחר איש קשר";return}
+        const c=r[0],nm=((c.name&&c.name[0])||"").trim(),ph=((c.tel&&c.tel[0])||"").trim();
+        if(!nm&&!ph){msg.textContent="לא התקבלו שם או טלפון מאיש הקשר";return}
+        put(nm,ph)}catch(e){msg.textContent="שגיאה: "+((e&&e.name)||"")+" "+((e&&e.message)||"")}};
+      box.appendChild(b)}
+    const pb=document.createElement("button");pb.className="cal";pb.textContent="📋 הדבק שם וטלפון מהלוח";
+    pb.onclick=async()=>{let t="";try{t=await navigator.clipboard.readText()}catch(e){t=prompt("הדבק כאן שם וטלפון")||""}
+      const m=t.match(/(?:\+?972|0)[\d\s-]{8,12}\d/);if(!m){msg.textContent="לא נמצא מספר טלפון בטקסט שהודבק";return}
+      const nm=t.replace(m[0],"").replace(/[\n\r,;:]+/g," ").trim();put(nm.length<=40?nm:"",m[0].trim())};
+    box.appendChild(pb);box.appendChild(msg);$("dyn").prepend(box)}
 }
 function fillSt(){const sel=$("e_stat");if(!sok(ed.s,ed.type))ed.s="N";sel.innerHTML=SL.filter(x=>sok(x[0],ed.type)).map(x=>'<option value="'+x[0]+'"'+(ed.s===x[0]?" selected":"")+">"+x[1]+"</option>").join("")}
 function openEd(id){
