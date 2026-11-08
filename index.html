@@ -308,7 +308,7 @@ async function saveOut(name,text,box){
   try{const b=new Blob([text],{type:name.endsWith(".csv")?"text/csv;charset=utf-8":"application/json"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);box.textContent="✓ הקובץ יורד";return}catch(e){}
   box.innerHTML='ההורדה לא זמינה כאן. סמן והעתק את הטקסט:<textarea readonly rows="6"></textarea>';box.querySelector("textarea").value=text}
 function openMenu(){
-  $("sh2").innerHTML='<h2>שיתוף וגיבוי</h2><button class="qs" id="m_s">🔗 שיתוף עם בן/בת הזוג</button><button class="qs" id="m_j">⬇ הורד גיבוי (JSON)</button><button class="qs" id="m_c">⬇ ייצוא לטבלה (CSV)</button><label class="qs" style="cursor:pointer">⬆ שחזור מגיבוי<input type="file" id="m_f" accept=".json,application/json" hidden></label><div id="m_o" style="font-size:13px;color:var(--mute);margin-top:8px"></div><div class="m" style="margin-top:10px">גרסה 3</div>';
+  $("sh2").innerHTML='<h2>שיתוף וגיבוי</h2><button class="qs" id="m_s">🔗 שיתוף עם בן/בת הזוג</button><button class="qs" id="m_j">⬇ הורד גיבוי (JSON)</button><button class="qs" id="m_c">⬇ ייצוא לטבלה (CSV)</button><label class="qs" style="cursor:pointer">⬆ שחזור מגיבוי<input type="file" id="m_f" accept=".json,application/json" hidden></label><div id="m_o" style="font-size:13px;color:var(--mute);margin-top:8px"></div><div class="m" style="margin-top:10px">גרסה 4</div>';
   const o=$("m_o");
   $("m_s").onclick=openShare;
   $("m_j").onclick=()=>saveOut("new-house-backup.json",JSON.stringify({app:"nh",v:1,exported:new Date().toISOString(),tasks:S.tasks},null,1),o);
@@ -415,9 +415,9 @@ function dyn(){
       if(nm&&n){n.value=nm;n.dispatchEvent(new Event("change",{bubbles:true}))}
       msg.textContent="✓ "+[nm,ph].filter(Boolean).join(" · ")+" (לחץ ״שמור״ כדי לשמור)"};
     if(navigator.contacts&&navigator.contacts.select){
-      const b=document.createElement("button");b.className="cal";b.textContent="📇 בחר מאנשי הקשר";
-      b.onclick=async()=>{msg.textContent="…";try{localStorage.setItem("nh_pickctx",String(Date.now()))}catch(e){}try{const r=await navigator.contacts.select(["name","tel"],{multiple:false});
-        if(!r||!r.length){msg.textContent="לא נבחר איש קשר";return}
+      let pm=true;const b=document.createElement("button");b.className="cal";b.textContent="📇 בחר מאנשי הקשר";
+      b.onclick=async()=>{msg.textContent="…";try{localStorage.setItem("nh_pickctx",String(Date.now()))}catch(e){}try{const r=await navigator.contacts.select(["name","tel"],{multiple:pm});
+        if(!r||!r.length){pm=!pm;msg.textContent="לא נבחר איש קשר (החלון החזיר רשימה ריקה). לחץ שוב על הכפתור, הפעם בשיטת בחירה אחרת. בחר איש קשר כך שיופיע לידו סימן ✓ ורק אז לחץ ״בוצע״.";return}
         const c=r[0],nm=((c.name&&c.name[0])||"").trim(),ph=((c.tel&&c.tel[0])||"").trim();
         if(!nm&&!ph){msg.textContent="לא התקבלו שם או טלפון מאיש הקשר";return}
         put(nm,ph)}catch(e){msg.textContent="שגיאה: "+((e&&e.name)||"")+" "+((e&&e.message)||"")}finally{try{localStorage.removeItem("nh_pickctx")}catch(e){}}};
