@@ -86,6 +86,14 @@ details.dn{border:0;border-radius:0;margin:0;border-top:1px dashed var(--line)}
 details.dn summary{font-weight:400;font-size:13px;color:var(--mute);padding:8px 14px}
 .pp{display:flex;flex-wrap:wrap;gap:6px 14px;padding:0 14px 8px;font-size:13px}
 .pp a{color:var(--accent);text-decoration:none}
+.sc{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--mute);border-radius:999px;padding:2px 9px;cursor:pointer}
+.sc.s1{color:var(--accent);border-color:var(--accent)}
+.sc.s2{color:var(--done);border-color:var(--done)}
+details.sb{background:var(--bg);border:1px solid var(--line);border-radius:10px;margin:8px 0;overflow:visible}
+details.sb summary{padding:8px 10px;font-size:14px}
+details.sb>*:not(summary){margin-inline:10px}
+details.sb>*:last-child{margin-bottom:10px}
+.ty-p{background:#a0457d}.st-V{background:#7a6ff0}.st-H{background:#c08a2c}
 .toast button{background:none;border:0;color:#8ec5ff;font-weight:600;cursor:pointer}
 #m_o textarea{width:100%;box-sizing:border-box;margin-top:6px;font:inherit;font-size:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
 .gw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px}
@@ -191,24 +199,44 @@ const RAW=[
 "חוץ ומרפסת|7|b|בטון|מחסן + משטח בטון",
 "חוץ ומרפסת|7|k||מערכת ישיבה למרפסת"
 ];
-const TY={a:"איסוף מחנות",k:"קנייה",h:"הרכבה עצמית",b:"בעל מקצוע",m:"מנהלה"};
+const TY={p:"מוצר",b:"בעל מקצוע",m:"מנהלה"};
 const ST=["","לפני הכניסה ומנהלה","תשתיות ושיפוצים","התקנות קבועות","מכשירים וחיבורים","ריהוט והרכבות","גימורים ואביזרים","חוץ"];
 const FD={
  b:[["trade","תחום (חשמלאי, אינסטלטור…)","text","trades"],["name","שם בעל המקצוע","text","names"],["phone","טלפון","tel"],["note","הערות","area"]],
- a:[["name","שם החנות","text","names"],["phone","טלפון","tel"],["ref","מספר הזמנה","text"],["note","הערות","area"]],
- k:[["name","חנות / ספק","text","names"],["phone","טלפון","tel"],["url","קישור","url"],["note","הערות","area"]],
- h:[["name","מי מרכיב","text","names"],["note","הערות","area"]],
+ p:[["url","קישור למוצר","url"],["ref","מספר הזמנה","text"],["note","הערות","area"]],
  m:[["name","גוף / חברה","text","names"],["phone","טלפון","tel"],["ref","מספר לקוח / אסמכתא","text"],["note","הערות","area"]]
 };
-const NONE="ללא בעל מקצוע";
-const SL=[["N","טרם התחיל"],["F","למצוא בעל מקצוע","b"],["O","להזמין / לקנות","ka"],["D","לקבוע תאריך"],["Q","ממתין להצעה"],["W","ממתין לביצוע"],["P","בתהליך"],["X","בוצע"]];
+const NONE="מוצרים ואחר";
+const SL=[["N","טרם התחיל"],["F","למצוא בעל מקצוע","b"],["O","להזמין / לקנות","p"],["V","ממתין לאספקה","p"],["H","ממתין להתקנה","p"],["D","לקבוע תאריך","bm"],["Q","ממתין להצעה","bm"],["W","ממתין לביצוע"],["P","בתהליך"],["X","בוצע"]];
 const SN=Object.fromEntries(SL.map(x=>[x[0],x[1]]));
 const sok=(s,ty)=>{const r=SL.find(x=>x[0]===s);return !!r&&(!r[2]||r[2].includes(ty))};
+const PRE=["קנייה","אספקה לבית","איסוף מהחנות","התקנה","הרכבה","חיבור"],DEF=["קנייה","אספקה לבית","התקנה"];
+const ord=n=>{const i=PRE.indexOf(n);return i<0?99:i};
+const mkst=a=>a.map(n=>({n,s:0,d:"",who:"",ph:""}));
+const cat=n=>/(^|\s)(התקנ|הרכב|חיבור)/.test(n)?"i":/אספק|הובל|איסוף/.test(n)?"d":/(^|\s)(קנ|הזמנ)/.test(n)?"b":"o";
+const mid=n=>({b:"הוזמן",d:"בדרך"})[cat(n)]||"בביצוע";
+function calc(t){
+  const st=t.st||[];if(!st.length)return t.s||"N";
+  if(st.every(x=>x.s===2))return "X";
+  const x=st.find(y=>y.s<2),c=cat(x.n);
+  if(c==="b")return x.s===1?"V":"O";
+  if(c==="d")return "V";
+  if(c==="i")return x.s===1?"P":"H";
+  return x.s===1?"P":"W"}
+function MIG(t){
+  const o=t.type,f=t.f;
+  if(o==="k"||o==="a"||o==="h"){
+    t.type="p";t.st=mkst(o==="h"?["קנייה","אספקה לבית","הרכבה"]:o==="a"?["קנייה","איסוף מהחנות","התקנה"]:DEF);const s=t.s;
+    if(s==="X")t.st.forEach(x=>x.s=2);else if(s==="Q"||s==="W")t.st[0].s=1;else if(s==="P"){t.st[0].s=2;t.st[1].s=1}
+    const d=f.start||f.end||"";if(d)t.st[0].d=d;
+    if(o==="h"){if(f.name)t.st[2].who=f.name}else{if(f.name)t.st[0].who=f.name;if(f.phone)t.st[0].ph=f.phone}
+    delete f.start;delete f.end;delete f.name;delete f.phone}
+  if(t.type==="p"){if(!t.st)t.st=mkst(DEF);t.s=calc(t);t.done=t.s==="X"}}
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let S={t:0,tasks:RAW.map((s,i)=>{const p=s.split("|");return{id:i,room:p[0],stage:+p[1],type:p[2],trade:p[3],text:p[4],done:false,f:{}}})};
 try{const j=JSON.parse(localStorage.getItem("nh_state")||"null");if(j&&j.tasks)S=j;else{JSON.parse(localStorage.getItem("nh_done")||"[]").forEach(i=>{const x=S.tasks.find(t=>t.id===i);if(x)x.done=true})}}catch(e){}
-function norm(x){x.del=x.del||{};x.tasks.forEach(t=>{const f=t.f=t.f||{};if(!t.s)t.s=t.done?"X":"N";if(f.date){if(!f.start)f.start=f.date;if(!f.end)f.end=f.date;delete f.date}if(t.u==null)t.u=0;if(t.w==null)t.w=""});return x}
+function norm(x){x.del=x.del||{};x.tasks.forEach(t=>{const f=t.f=t.f||{};if(!t.s)t.s=t.done?"X":"N";if(f.date){if(!f.start)f.start=f.date;if(!f.end)f.end=f.date;delete f.date}if(t.u==null)t.u=0;if(t.w==null)t.w="";MIG(t)});return x}
 function merge(a,b){
   const del={...(a.del||{})};for(const k in (b.del||{}))del[k]=Math.max(del[k]||0,b.del[k]);
   const m=new Map();[...a.tasks,...b.tasks].forEach(t=>{const o=m.get(t.id);if(!o||(t.u||0)>(o.u||0))m.set(t.id,t)});
@@ -282,7 +310,8 @@ function fds(d){const p=d.split("-");return p[2]+"/"+p[1]}
 function meta(t){
   const f=t.f||{},a=[];
   const cls=t.s==="X"?"sd":"FOD".includes(t.s)?"sw":t.s==="N"?"":"si";
-  a.push('<button class="b st '+cls+'" data-s="'+t.id+'">'+SN[t.s]+" ▾</button>");
+  if(t.type==="p"&&t.st&&t.st.length)a.push(t.st.map((x,i)=>'<button class="sc s'+x.s+'" data-sc="'+t.id+'_'+i+'">'+["○","◐","✓"][x.s]+" "+esc(x.n)+(x.s<2&&x.d?" "+fds(x.d):"")+"</button>").join(""));
+  else a.push('<button class="b st '+cls+'" data-s="'+t.id+'">'+SN[t.s]+" ▾</button>");
   if(view!=="room")a.push("<span>"+esc(t.room)+"</span>");
   if(view!=="trade"&&t.type==="b"&&t.trade)a.push("<span>"+esc(t.trade)+"</span>");
   if(t.w)a.push("<span>👤 "+esc(t.w)+"</span>");
@@ -290,30 +319,31 @@ function meta(t){
   if(f.phone&&view!=="trade")a.push('<a href="tel:'+esc(f.phone.replace(/[^0-9+]/g,""))+'">📞</a>');
   return a.join("");
 }
-function late(t){const f=t.f||{},d=f.end||f.start;return !t.done&&!!d&&d<tl()}
-function soon(t){const f=t.f||{},d=f.start;if(t.done||!d)return false;const n=DN(d)-DN(tl());return n>=0&&n<=7}
+function due1(t){const x=(t.st||[]).find(y=>y.s<2&&y.d);return x?x.d:""}
+function late(t){const f=t.f||{},d=t.type==="p"?due1(t):(f.end||f.start);return !t.done&&!!d&&d<tl()}
+function soon(t){const f=t.f||{},d=t.type==="p"?due1(t):f.start;if(t.done||!d)return false;const n=DN(d)-DN(tl());return n>=0&&n<=7}
 function pass(t){return (ftype==="all"||t.type===ftype)&&(fst==="all"||t.s===fst)&&(fx==="all"||(fx==="late"?late(t):fx==="soon"?soon(t):t.w===ME))&&!(hide&&t.done)&&(!qq||(t.text+" "+t.room+" "+(t.trade||"")+" "+((t.f||{}).name||"")).toLowerCase().includes(qq))}
 function cards(){
-  const L=S.tasks,c={F:0,O:0,D:0};L.forEach(t=>{if(!t.done&&c[t.s]!=null)c[t.s]++});
-  const it=[["sF","צריך למצוא בעל מקצוע",c.F],["sO","צריך להזמין / לקנות",c.O],["sD","צריך לקבוע תאריך",c.D],["xlate","באיחור",L.filter(late).length],["xsoon","ב-7 הימים הקרובים",L.filter(soon).length],["xmine","המשימות שלי",ME?L.filter(t=>!t.done&&t.w===ME).length:0]].filter(i=>i[2]>0);
+  const L=S.tasks,c={F:0,O:0,V:0,H:0,D:0};L.forEach(t=>{if(!t.done&&c[t.s]!=null)c[t.s]++});
+  const it=[["sF","צריך למצוא בעל מקצוע",c.F],["sO","צריך להזמין / לקנות",c.O],["sV","ממתין לאספקה",c.V],["sH","ממתין להתקנה",c.H],["sD","צריך לקבוע תאריך",c.D],["xlate","באיחור",L.filter(late).length],["xsoon","ב-7 הימים הקרובים",L.filter(soon).length],["xmine","המשימות שלי",ME?L.filter(t=>!t.done&&t.w===ME).length:0]].filter(i=>i[2]>0);
   return it.length?'<div class="cards">'+it.map(i=>'<button class="card'+((i[0][0]==="s"?fst:fx)===i[0].slice(1)?" on":"")+(i[0]==="xlate"?" lw":"")+'" data-card="'+i[0]+'"><b>'+i[2]+"</b><span>"+i[1]+"</span></button>").join("")+"</div>":""}
 async function copyTxt(t,b){let ok=false;try{await navigator.clipboard.writeText(t);ok=true}catch(e){try{const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,99999);ok=document.execCommand("copy");ta.remove()}catch(x){}}const o=b.textContent;b.textContent=ok?(o.length>2?"✓ הועתק, הדבק בחייגן":"✓"):"לא הצלחתי להעתיק";setTimeout(()=>{b.textContent=o},3000)}
 function wa(ph){let d=String(ph).replace(/\D/g,"");if(d.startsWith("00"))d=d.slice(2);else if(d.startsWith("0"))d="972"+d.slice(1);return "https://wa.me/"+d}
 function csvOf(){
   const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
-  const hd=["חדר","שלב","משימה","סוג","סטטוס","תחום","שם","טלפון","תאריך התחלה","תאריך סיום","קישור","אסמכתא","הערות"];
-  const rows=S.tasks.map(t=>{const f=t.f||{};return [t.room,ST[t.stage],t.text,TY[t.type],SN[t.s],t.trade||"",f.name,f.phone,f.start,f.end,f.url,f.ref,f.note].map(q).join(",")});
+  const hd=["חדר","שלב","משימה","סוג","סטטוס","תחום","שם","טלפון","תאריך התחלה","תאריך סיום","קישור","אסמכתא","הערות","מסלול מוצר"];
+  const rows=S.tasks.map(t=>{const f=t.f||{};return [t.room,ST[t.stage],t.text,TY[t.type],SN[t.s],t.trade||"",f.name,f.phone,f.start,f.end,f.url,f.ref,f.note,(t.type==="p"?(t.st||[]).map(x=>x.n+" "+["טרם","בתהליך","בוצע"][x.s]+(x.d?" "+x.d:"")).join(" > "):"")].map(q).join(",")});
   return "\uFEFF"+[hd.map(q).join(","),...rows].join("\r\n")}
 async function saveOut(name,text,box){
   try{const b=new Blob([text],{type:name.endsWith(".csv")?"text/csv;charset=utf-8":"application/json"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);box.textContent="✓ הקובץ יורד";return}catch(e){}
   box.innerHTML='ההורדה לא זמינה כאן. סמן והעתק את הטקסט:<textarea readonly rows="6"></textarea>';box.querySelector("textarea").value=text}
 function openMenu(){
-  $("sh2").innerHTML='<h2>שיתוף וגיבוי</h2><button class="qs" id="m_s">🔗 שיתוף עם בן/בת הזוג</button><button class="qs" id="m_w">👤 השם שלי: '+esc(ME||"לא הוגדר")+'</button><button class="qs" id="m_j">⬇ הורד גיבוי (JSON)</button><button class="qs" id="m_c">⬇ ייצוא לטבלה (CSV)</button><label class="qs" style="cursor:pointer">⬆ שחזור מגיבוי<input type="file" id="m_f" accept=".json,application/json" hidden></label><div id="m_o" style="font-size:13px;color:var(--mute);margin-top:8px"></div><div class="m" style="margin-top:10px">גרסה 5</div>';
+  $("sh2").innerHTML='<h2>שיתוף וגיבוי</h2><button class="qs" id="m_s">🔗 שיתוף עם בן/בת הזוג</button><button class="qs" id="m_w">👤 השם שלי: '+esc(ME||"לא הוגדר")+'</button><button class="qs" id="m_j">⬇ הורד גיבוי (JSON)</button><button class="qs" id="m_c">⬇ ייצוא לטבלה (CSV)</button><label class="qs" style="cursor:pointer">⬆ שחזור מגיבוי<input type="file" id="m_f" accept=".json,application/json" hidden></label><div id="m_o" style="font-size:13px;color:var(--mute);margin-top:8px"></div><div class="m" style="margin-top:10px">גרסה 6</div>';
   const o=$("m_o");
   $("m_s").onclick=openShare;$("m_w").onclick=openWho;
   $("m_j").onclick=()=>saveOut("new-house-backup.json",JSON.stringify({app:"nh",v:1,exported:new Date().toISOString(),tasks:S.tasks},null,1),o);
   $("m_c").onclick=()=>saveOut("new-house-tasks.csv",csvOf(),o);
-  $("m_f").onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j||!Array.isArray(j.tasks)||!j.tasks.every(t=>t&&typeof t.text==="string"&&t.id!=null&&TY[t.type]))throw 0;snap("הגיבוי שוחזר");const n=Date.now(),del={...S.del};S.tasks.forEach(t=>{if(!j.tasks.some(x=>x.id===t.id))del[t.id]=n});j.tasks.forEach(t=>t.u=n);S=norm({t:0,tasks:j.tasks,del});persist();$("ov2").classList.remove("on");render()}catch(x){o.textContent="הקובץ לא תקין"}};r.readAsText(f)};
+  $("m_f").onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j||!Array.isArray(j.tasks)||!j.tasks.every(t=>t&&typeof t.text==="string"&&t.id!=null&&(TY[t.type]||"kah".includes(t.type))))throw 0;snap("הגיבוי שוחזר");const n=Date.now(),del={...S.del};S.tasks.forEach(t=>{if(!j.tasks.some(x=>x.id===t.id))del[t.id]=n});j.tasks.forEach(t=>t.u=n);S=norm({t:0,tasks:j.tasks,del});persist();$("ov2").classList.remove("on");render()}catch(x){o.textContent="הקובץ לא תקין"}};r.readAsText(f)};
   $("ov2").classList.add("on")}
 $("mn").onclick=openMenu;
 function snap(m){us=JSON.stringify({tasks:S.tasks,del:S.del});$("tt").textContent=m;$("tu").style.display="";$("toast").style.whiteSpace="";$("toast").hidden=false;clearTimeout(tmr);tmr=setTimeout(()=>{$("toast").hidden=true},6000)}
@@ -340,7 +370,7 @@ function grp(k,ts){
     pp+todo.map(row).join("")+(dn.length?'<details class="dn"><summary>בוצעו ('+dn.length+")</summary>"+dn.map(row).join("")+"</details>":""),dn.length<ts.length)}
 function agenda(){
   const m=$("main"),today=DN(tl()),B=[["late","⚠️ באיחור"],["today","📍 היום"],["week","📅 ב-7 הימים הקרובים"],["month","🗓️ בחודש הקרוב"],["later","⏳ מאוחר יותר"],["none","❔ בלי תאריך"]],g={};
-  S.tasks.filter(t=>!t.done&&pass(t)).forEach(t=>{const r=sch(t);let b,k=1e9;
+  S.tasks.filter(t=>!t.done&&pass(t)).forEach(t=>{const r=t.type==="p"?(due1(t)?[DN(due1(t)),DN(due1(t))]:null):sch(t);let b,k=1e9;
     if(!r)b="none";else{k=r[0];if(late(t))b="late";else if(r[0]<=today&&r[1]>=today)b="today";else{const n=r[0]-today;b=n<=7?"week":n<=30?"month":"later"}}
     (g[b]=g[b]||[]).push([k,t])});
   m.innerHTML=cards();let any=false;
@@ -355,7 +385,7 @@ function render(){
   $("ft").textContent="סינון"+((ftype!=="all"||fst!=="all"||hide)?" •":"");
   const all=S.tasks,dn=all.filter(t=>t.done).length,opt=a=>[...new Set(a.filter(Boolean))].map(r=>'<option value="'+esc(r)+'">').join("");
   $("pt").textContent=dn+"/"+all.length;$("pp").textContent=Math.round(dn/(all.length||1)*100)+"%";$("pb").style.width=(dn/(all.length||1)*100)+"%";
-  $("rooms").innerHTML=opt(all.map(t=>t.room));$("trades").innerHTML=opt(all.map(t=>t.trade));$("names").innerHTML=opt(all.map(t=>(t.f||{}).name));$("whos").innerHTML=opt([ME,...all.map(t=>t.w)]);
+  $("rooms").innerHTML=opt(all.map(t=>t.room));$("trades").innerHTML=opt(all.map(t=>t.trade));$("names").innerHTML=opt(all.flatMap(t=>[(t.f||{}).name,...(t.st||[]).map(x=>x.who)]));$("whos").innerHTML=opt([ME,...all.map(t=>t.w)]);
   if(view==="gantt"){gantt();return}
   if(view==="agenda"){agenda();return}
   const g=new Map();
@@ -369,7 +399,7 @@ function render(){
 }
 function tl(){const n=new Date(),p=x=>String(x).padStart(2,"0");return n.getFullYear()+"-"+p(n.getMonth()+1)+"-"+p(n.getDate())}
 const DAYMS=86400000,DN=s=>Math.floor(Date.parse(s)/DAYMS);
-function sch(t){const f=t.f||{},s=f.start||f.end||f.date,e=f.end||f.start||f.date;if(!s)return null;const a=DN(s);let b=DN(e);if(b<a)b=a;return[a,b]}
+function sch(t){const f=t.f||{};let s,e;if(t.type==="p"){const ds=(t.st||[]).map(x=>x.d).filter(Boolean).sort();if(!ds.length)return null;s=ds[0];e=ds[ds.length-1]}else{s=f.start||f.end||f.date;e=f.end||f.start||f.date}if(!s)return null;const a=DN(s);let b=DN(e);if(b<a)b=a;return[a,b]}
 function gantt(){
   const m=$("main"),DW=[14,24,36,52][gzi],LW=120,today=DN(tl());
   const list=S.tasks.filter(pass);
@@ -397,21 +427,29 @@ function gantt(){
   }else m.innerHTML='<div class="empty">אין עדיין משימות עם תאריכים.<br>לחץ על משימה ברשימה למטה והוסף תאריך התחלה וסיום.</div>';
   if(un.length){const d=document.createElement("details");d.open=!sc.length;d.innerHTML='<summary><span>ללא תאריכים</span><small>'+un.length+"</small></summary>"+un.map(t=>'<div class="t"><div class="x" data-e="'+t.id+'"><span class="tx">'+esc(t.text)+'</span><div class="m"><span>'+esc(t.room)+"</span></div></div></div>").join("");m.appendChild(d)}
 }
-$("main").addEventListener("change",e=>{const id=e.target.dataset&&e.target.dataset.c;if(id==null)return;const t=S.tasks.find(x=>x.id===+id);if(t){snap(e.target.checked?"סומן כבוצע":"הסימון בוטל");if(e.target.checked){t.ps=t.s;t.s="X"}else t.s=t.ps&&t.ps!=="X"?t.ps:"N";t.done=e.target.checked;t.u=Date.now();persist();render()}});
+$("main").addEventListener("change",e=>{const id=e.target.dataset&&e.target.dataset.c;if(id==null)return;const t=S.tasks.find(x=>x.id===+id);if(t){snap(e.target.checked?"סומן כבוצע":"הסימון בוטל");if(t.type==="p"&&t.st&&t.st.length){const p=t.pst||[];if(e.target.checked){t.pst=t.st.map(x=>x.s);t.st.forEach(x=>x.s=2)}else{t.st.forEach((x,i)=>x.s=p[i]!=null&&p[i]<2?p[i]:2);if(t.st.every(x=>x.s===2))t.st[t.st.length-1].s=0}t.s=calc(t);t.done=t.s==="X"}
+  else{if(e.target.checked){t.ps=t.s;t.s="X"}else t.s=t.ps&&t.ps!=="X"?t.ps:"N";t.done=e.target.checked}
+  t.u=Date.now();persist();render()}});
 $("main").addEventListener("click",e=>{
   const c=e.target.closest("[data-card]");
   if(c){const k=c.dataset.card,v=k.slice(1);if(k[0]==="s")fst=fst===v?"all":v;else fx=fx===v?"all":v;render();return}
-  const qa=e.target.closest("[data-qa]");if(qa){e.preventDefault();const k=qa.dataset.qa;openEd(null,view==="room"?{room:k}:view==="stage"?{stage:parseInt(k)}:k!==NONE?{type:"b",trade:k}:{});return}
+  const qa=e.target.closest("[data-qa]");if(qa){e.preventDefault();const k=qa.dataset.qa;addNew(view==="room"?{room:k}:view==="stage"?{stage:parseInt(k)}:k!==NONE?{type:"b",trade:k}:{});return}
+  const sc=e.target.closest("[data-sc]");if(sc){const[a,b]=sc.dataset.sc.split("_"),t=S.tasks.find(x=>x.id===+a);if(t&&t.st[+b]){snap("השלב עודכן");const x=t.st[+b];x.s=(x.s+1)%3;t.s=calc(t);t.done=t.s==="X";t.u=Date.now();persist();render()}return}
   const q=e.target.closest("[data-s]");if(q){openQs(+q.dataset.s);return}
   if(e.target.closest("a"))return;const x=e.target.closest("[data-e]");if(x)openEd(+x.dataset.e)});
 $("hd").addEventListener("change",e=>{hide=e.target.checked;render()});
-$("add").onclick=()=>openEd(null);
+function addNew(pre){
+  if(pre&&pre.type){openEd(null,pre);return}
+  $("sh2").innerHTML='<h2>מה להוסיף?</h2><button class="qs" data-t="p">🛒 מוצר (קנייה ← אספקה ← התקנה)</button><button class="qs" data-t="b">🔧 משימה לבעל מקצוע</button><button class="qs" data-t="m">📋 מנהלה / אחר</button>';
+  $("sh2").querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{$("ov2").classList.remove("on");openEd(null,Object.assign({},pre||{},{type:b.dataset.t}))});
+  $("ov2").classList.add("on")}
+$("add").onclick=()=>addNew({});
 $("ov").addEventListener("click",e=>{if(e.target===$("ov"))closeEd()});
 
 function collect(){
   const sh=$("sh");
   ed.text=sh.querySelector("#e_text").value;ed.room=sh.querySelector("#e_room").value;
-  ed.stage=+sh.querySelector("#e_stage").value;ed.type=sh.querySelector("#e_type").value;const es=sh.querySelector("#e_stat");if(es&&es.value)ed.s=es.value;const ew=sh.querySelector("#e_who");if(ew)ed.w=ew.value.trim();
+  ed.stage=+sh.querySelector("#e_stage").value;ed.type=sh.querySelector("#e_type").value;const es=sh.querySelector("#e_stat");if(es&&!es.disabled&&es.value)ed.s=es.value;const ew=sh.querySelector("#e_who");if(ew)ed.w=ew.value.trim();stCollect();
   sh.querySelectorAll("[data-k]").forEach(i=>{const k=i.dataset.k;if(k==="trade")ed.trade=i.value;else ed.f[k]=i.value});
 }
 function dyn(){
@@ -420,40 +458,66 @@ function dyn(){
     const inp=ty==="area"?'<textarea rows="3" data-k="'+k+'">'+esc(v)+"</textarea>":'<input data-k="'+k+'" type="'+ty+'" value="'+esc(v)+'"'+(li?' list="'+li+'"':"")+">";
     return "<label>"+l+"</label>"+inp}).join("");
 }
-function fillSt(){const sel=$("e_stat");if(!sok(ed.s,ed.type))ed.s="N";sel.innerHTML=SL.filter(x=>sok(x[0],ed.type)).map(x=>'<option value="'+x[0]+'"'+(ed.s===x[0]?" selected":"")+">"+x[1]+"</option>").join("")}
+function fillSt(){const sel=$("e_stat");
+  if(ed.type==="p"){sel.disabled=true;sel.innerHTML="<option>"+SN[calc(ed)]+" (לפי מסלול המוצר)</option>";return}
+  sel.disabled=false;if(!sok(ed.s,ed.type))ed.s="N";sel.innerHTML=SL.filter(x=>sok(x[0],ed.type)).map(x=>'<option value="'+x[0]+'"'+(ed.s===x[0]?" selected":"")+">"+x[1]+"</option>").join("")}
+let soi=-1;
+function stCollect(){if(!ed||ed.type!=="p"||!$("stp"))return;const q=$("stp");
+  q.querySelectorAll("[data-sd]").forEach(i=>{ed.st[+i.dataset.sd].d=i.value});q.querySelectorAll("[data-sp]").forEach(i=>{ed.st[+i.dataset.sp].ph=i.value});q.querySelectorAll("[data-sw]").forEach(i=>{ed.st[+i.dataset.sw].who=i.value})}
+function stRender(){
+  const box=$("stp"),dt=$("e_dates");
+  if(ed.type!=="p"){box.innerHTML="";dt.style.display="";return}
+  dt.style.display="none";
+  const on=new Set(ed.st.map(x=>x.n)),op=soi>=0&&soi<ed.st.length?soi:ed.st.findIndex(x=>x.s<2);
+  box.innerHTML='<label>מסלול המוצר</label><div class="chips">'+PRE.map(n=>'<button type="button" class="'+(on.has(n)?"on":"")+'" data-pn="'+n+'">'+(on.has(n)?"✓ ":"")+n+"</button>").join("")+'</div><div class="two" style="margin-top:6px"><input id="e_sn" list="stepn" placeholder="שלב אחר…"><button type="button" class="cal" id="e_sa" style="margin:0;width:auto;padding:6px 16px">הוסף</button></div><datalist id="stepn">'+PRE.map(n=>'<option value="'+n+'">').join("")+"</datalist>"+
+   ed.st.map((x,i)=>'<details class="sb"'+(i===op?" open":"")+"><summary><span>"+["○","◐","✓"][x.s]+" "+esc(x.n)+(x.d?" · "+fds(x.d):"")+'</span><button type="button" class="qa" data-rm="'+i+'" aria-label="הסר שלב">✕</button></summary>'+
+     '<div class="seg">'+["טרם","◐ "+mid(x.n),"✓ בוצע"].map((l,k)=>'<button type="button" class="'+(x.s===k?"on":"")+'" data-ss="'+i+"_"+k+'">'+l+"</button>").join("")+"</div>"+
+     '<div class="two"><div><label>תאריך</label><input type="date" data-sd="'+i+'" value="'+esc(x.d)+'"></div><div><label>טלפון</label><input type="tel" dir="ltr" data-sp="'+i+'" value="'+esc(x.ph)+'"></div></div>'+
+     '<label>גורם (חנות / מוביל / מתקין)</label><input data-sw="'+i+'" list="names" value="'+esc(x.who)+'"></details>').join("")}
 function openEd(id,pre){
   const src=id==null?null:S.tasks.find(t=>t.id===id);
   ed=src?JSON.parse(JSON.stringify(src)):{id:null,room:"כללי",stage:1,type:"b",trade:"",text:"",done:false,s:"N",w:"",u:0,f:{}};
-  if(!src&&pre)Object.assign(ed,pre);ed.f=ed.f||{};modalOpen=true;
+  if(!src&&pre)Object.assign(ed,pre);ed.f=ed.f||{};modalOpen=true;soi=-1;ed.st=ed.st||[];if(ed.type==="p"&&!ed.st.length)ed.st=mkst(DEF);
   const more=ed.trade||Object.keys(ed.f).some(k=>k!=="start"&&k!=="end"&&ed.f[k]);
   $("sh").innerHTML="<h2>"+(src?"פרטי משימה":"משימה חדשה")+'</h2><label>משימה</label><input id="e_text" value="'+esc(ed.text)+'">'+
     '<label>חדר / מקום</label><input id="e_room" list="rooms" value="'+esc(ed.room)+'">'+
     '<div class="two"><div><label>סטטוס</label><select id="e_stat"></select></div><div><label>אחראי</label><input id="e_who" list="whos" value="'+esc(ed.w)+'" placeholder="מי אחראי?"></div></div>'+
     '<div class="two"><div><label>סוג</label><select id="e_type">'+Object.entries(TY).map(([k,l])=>'<option value="'+k+'"'+(ed.type===k?" selected":"")+">"+l+"</option>").join("")+'</select></div><div><label>שלב</label><select id="e_stage">'+ST.slice(1).map((s,i)=>'<option value="'+(i+1)+'"'+(ed.stage===i+1?" selected":"")+">"+(i+1)+". "+s+"</option>").join("")+"</select></div></div>"+
-    '<div class="two"><div><label>תאריך התחלה</label><input type="date" data-k="start" value="'+esc(ed.f.start)+'"></div><div><label>תאריך סיום</label><input type="date" data-k="end" value="'+esc(ed.f.end)+'"></div></div>'+
+    '<div id="e_dates"><div class="two"><div><label>תאריך התחלה</label><input type="date" data-k="start" value="'+esc(ed.f.start)+'"></div><div><label>תאריך סיום</label><input type="date" data-k="end" value="'+esc(ed.f.end)+'"></div></div></div><div id="stp"></div>'+
     '<a class="cal" id="e_cal" target="_blank" rel="noopener">📅 הוסף ליומן</a>'+
     '<details class="more"'+(more?" open":"")+'><summary>פרטים נוספים: שם, טלפון, הערות</summary><div id="dyn"></div></details>'+
     '<div class="row"><button class="pri" id="e_save">שמור</button><button id="e_cancel">ביטול</button>'+(src?'<button class="del" id="e_del">מחק</button>':"")+"</div>";
   dyn();
-  fillSt();
+  fillSt();stRender();
+  $("stp").onclick=e=>{
+    const b=e.target.closest("button");if(!b||ed.type!=="p")return;stCollect();
+    if(b.dataset.pn){const n=b.dataset.pn,i=ed.st.findIndex(x=>x.n===n);if(i>=0)ed.st.splice(i,1);else{ed.st.push({n,s:0,d:"",who:"",ph:""});ed.st.sort((a,c)=>ord(a.n)-ord(c.n))}}
+    else if(b.dataset.ss){const[i,k]=b.dataset.ss.split("_");ed.st[+i].s=+k;soi=+i}
+    else if(b.dataset.rm!=null){e.preventDefault();ed.st.splice(+b.dataset.rm,1);soi=-1}
+    else if(b.id==="e_sa"){const v=$("e_sn").value.trim();if(!v)return;ed.st.push({n:v,s:0,d:"",who:"",ph:""});soi=ed.st.length-1}
+    else return;
+    stRender();fillSt()};
+  $("stp").onchange=e=>{const i=e.target.dataset&&e.target.dataset.sw;if(i==null)return;const o=S.tasks.flatMap(t=>[{w:(t.f||{}).name,p:(t.f||{}).phone},...(t.st||[]).map(x=>({w:x.who,p:x.ph}))]).find(o=>o.w===e.target.value&&o.p),ph=$("stp").querySelector('[data-sp="'+i+'"]');if(o&&ph&&!ph.value)ph.value=o.p};
   $("dyn").onchange=e=>{const k=e.target.dataset&&e.target.dataset.k;if(k!=="name")return;const mt=S.tasks.find(t=>t.id!==ed.id&&t.f&&t.f.name===e.target.value&&(t.f.phone||t.trade));if(!mt)return;const ph=$("dyn").querySelector('[data-k="phone"]'),tr=$("dyn").querySelector('[data-k="trade"]');if(ph&&!ph.value&&mt.f.phone)ph.value=mt.f.phone;if(tr&&!tr.value&&mt.trade)tr.value=mt.trade};
-  $("e_type").onchange=()=>{collect();dyn();fillSt()};
+  $("e_type").onchange=()=>{collect();if(ed.type==="p"&&!ed.st.length)ed.st=mkst(DEF);dyn();fillSt();stRender()};
   const st=$("sh").querySelector('[data-k="start"]'),en=$("sh").querySelector('[data-k="end"]');
   st.dataset.p=st.value;
   st.onchange=()=>{if(!en.value||en.value<st.value||en.value===st.dataset.p)en.value=st.value;st.dataset.p=st.value};
   $("e_cancel").onclick=closeEd;
   const calUrl=()=>{
-    collect();const f=ed.f,s=f.start;if(!s)return"";
-    const e=f.end&&f.end>s?f.end:s,p=x=>x.replace(/-/g,""),nx=new Date(DN(e)*DAYMS+DAYMS).toISOString().slice(0,10);
-    const det=[TY[ed.type],SN[ed.s],f.name,f.phone,f.url,f.note].filter(Boolean).join("\n");
-    return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(ed.text)+"&dates="+p(s)+"/"+p(nx)+"&details="+encodeURIComponent(det)+"&location="+encodeURIComponent(ed.room);
+    collect();const f=ed.f;let s=f.start,e=f.end,ti=ed.text,ex=[f.name,f.phone];
+    if(ed.type==="p"){const x=(ed.st||[]).find(y=>y.s<2&&y.d);if(!x)return"";s=x.d;e=x.d;ti=ed.text+": "+x.n;ex=[x.who,x.ph]}
+    if(!s)return"";
+    e=e&&e>s?e:s;const p=x=>x.replace(/-/g,""),nx=new Date(DN(e)*DAYMS+DAYMS).toISOString().slice(0,10);
+    const det=[TY[ed.type],ed.type==="p"?"":SN[ed.s],...ex,f.url,f.note].filter(Boolean).join("\n");
+    return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(ti)+"&dates="+p(s)+"/"+p(nx)+"&details="+encodeURIComponent(det)+"&location="+encodeURIComponent(ed.room);
   };
   const calUpd=()=>{const a=$("e_cal"),u=calUrl();if(u){a.href=u;a.textContent="📅 הוסף ליומן"}else a.removeAttribute("href")};
   $("sh").oninput=calUpd;$("sh").onchange=calUpd;calUpd();
   $("e_cal").onclick=ev=>{const u=calUrl();if(!u){ev.preventDefault();$("e_cal").textContent="קבע קודם תאריך התחלה";return}$("e_cal").href=u};
   $("e_save").onclick=()=>{
     collect();ed.text=ed.text.trim();if(!ed.text){$("e_text").focus();return}
-    ed.room=ed.room.trim()||"כללי";ed.done=ed.s==="X";ed.u=Date.now();snap(ed.id==null?"המשימה נוספה":"השינויים נשמרו");
+    ed.room=ed.room.trim()||"כללי";if(ed.type==="p")ed.s=calc(ed);ed.done=ed.s==="X";ed.u=Date.now();snap(ed.id==null?"המשימה נוספה":"השינויים נשמרו");
     if(ed.id==null){ed.id=Date.now()*1000+Math.floor(Math.random()*1000);S.tasks.push(ed)}
     else{const i=S.tasks.findIndex(t=>t.id===ed.id);if(i>=0)S.tasks[i]=ed}
     persist();closeEd();
