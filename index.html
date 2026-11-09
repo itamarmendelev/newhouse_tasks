@@ -78,14 +78,15 @@ details.more{background:none;border:0;margin:10px 0 0;overflow:visible}
 .qs{display:block;width:100%;text-align:right;padding:12px;margin-top:8px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:15px;cursor:pointer}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:#222;color:#fff;border-radius:10px;padding:8px 14px;z-index:30;display:flex;gap:14px;align-items:center;font-size:14px;white-space:nowrap}
 .toast[hidden]{display:none}
+.gp{flex:1;height:6px;background:var(--line);border-radius:3px;margin:0 12px;overflow:hidden}
+.gp b{display:block;height:100%;background:var(--done)}
+summary>span{flex:none}
+.qa{flex:none;margin-inline-start:10px;width:30px;height:30px;border:1px solid var(--line);background:var(--card);border-radius:50%;font-size:18px;line-height:1;color:var(--accent);cursor:pointer}
+details.dn{border:0;border-radius:0;margin:0;border-top:1px dashed var(--line)}
+details.dn summary{font-weight:400;font-size:13px;color:var(--mute);padding:8px 14px}
+.pp{display:flex;flex-wrap:wrap;gap:6px 14px;padding:0 14px 8px;font-size:13px}
+.pp a{color:var(--accent);text-decoration:none}
 .toast button{background:none;border:0;color:#8ec5ff;font-weight:600;cursor:pointer}
-.pc{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;padding:12px 14px}
-.pn{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:16px}
-.pa{display:flex;gap:8px;margin:8px 0;font-size:12px;color:var(--mute)}
-.pb{flex:1;text-align:center;padding:9px 6px;border:1px solid var(--line);border-radius:10px;color:var(--accent);text-decoration:none;font-size:14px}
-button.pb{background:var(--card);cursor:pointer;font:inherit;font-size:14px}
-.pt{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);cursor:pointer;font-size:14px}
-.pt.d .l{color:var(--mute);text-decoration:line-through}
 #m_o textarea{width:100%;box-sizing:border-box;margin-top:6px;font:inherit;font-size:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
 .gw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px}
 .gr{display:flex}
@@ -123,7 +124,7 @@ a.cal{display:block;box-sizing:border-box;text-align:center;text-decoration:none
 <div class="ov" id="ov"><div class="sh" id="sh"></div></div>
 <div class="ov" id="ov2"><div class="sh" id="sh2"></div></div>
 <div class="toast" id="toast" hidden><span id="tt"></span><button id="tu">בטל</button></div>
-<datalist id="rooms"></datalist><datalist id="trades"></datalist><datalist id="names"></datalist>
+<datalist id="rooms"></datalist><datalist id="trades"></datalist><datalist id="names"></datalist><datalist id="whos"></datalist>
 <script>
 const RAW=[
 "כללי|1|b|ניקיון|ניקיון אחרי שיפוצים",
@@ -200,17 +201,24 @@ const FD={
  m:[["name","גוף / חברה","text","names"],["phone","טלפון","tel"],["ref","מספר לקוח / אסמכתא","text"],["note","הערות","area"]]
 };
 const NONE="ללא בעל מקצוע";
-const SL=[["N","טרם התחיל"],["F","צריך למצוא בעל מקצוע","b"],["O","צריך להזמין / לקנות","ka"],["D","צריך לקבוע תאריך"],["Q","ממתין להצעה / תשובה"],["W","ממתין לביצוע"],["P","בתהליך"],["X","בוצע"]];
+const SL=[["N","טרם התחיל"],["F","למצוא בעל מקצוע","b"],["O","להזמין / לקנות","ka"],["D","לקבוע תאריך"],["Q","ממתין להצעה"],["W","ממתין לביצוע"],["P","בתהליך"],["X","בוצע"]];
 const SN=Object.fromEntries(SL.map(x=>[x[0],x[1]]));
 const sok=(s,ty)=>{const r=SL.find(x=>x[0]===s);return !!r&&(!r[2]||r[2].includes(ty))};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let S={t:0,tasks:RAW.map((s,i)=>{const p=s.split("|");return{id:i,room:p[0],stage:+p[1],type:p[2],trade:p[3],text:p[4],done:false,f:{}}})};
 try{const j=JSON.parse(localStorage.getItem("nh_state")||"null");if(j&&j.tasks)S=j;else{JSON.parse(localStorage.getItem("nh_done")||"[]").forEach(i=>{const x=S.tasks.find(t=>t.id===i);if(x)x.done=true})}}catch(e){}
-function norm(x){x.tasks.forEach(t=>{const f=t.f=t.f||{};if(!t.s)t.s=t.done?"X":"N";if(f.date){if(!f.start)f.start=f.date;if(!f.end)f.end=f.date;delete f.date}});return x}
+function norm(x){x.del=x.del||{};x.tasks.forEach(t=>{const f=t.f=t.f||{};if(!t.s)t.s=t.done?"X":"N";if(f.date){if(!f.start)f.start=f.date;if(!f.end)f.end=f.date;delete f.date}if(t.u==null)t.u=0;if(t.w==null)t.w=""});return x}
+function merge(a,b){
+  const del={...(a.del||{})};for(const k in (b.del||{}))del[k]=Math.max(del[k]||0,b.del[k]);
+  const m=new Map();[...a.tasks,...b.tasks].forEach(t=>{const o=m.get(t.id);if(!o||(t.u||0)>(o.u||0))m.set(t.id,t)});
+  const ord=new Map(a.tasks.map((t,i)=>[t.id,i]));
+  const tasks=[...m.values()].filter(t=>!(del[t.id]>(t.u||0))).sort((x,y)=>(ord.has(x.id)?ord.get(x.id):1e9)-(ord.has(y.id)?ord.get(y.id):1e9));
+  return{t:Math.max(a.t||0,b.t||0),tasks,del}}
+function sig(x){return JSON.stringify([x.tasks.map(t=>[t.id,t.u||0]).sort((p,q)=>p[0]-q[0]),Object.entries(x.del||{}).sort()])}
 norm(S);
-let DB=null,tm=0,modalOpen=false,pending=null,view="room",ftype="all",fst="all",fx="all",qq="",us=null,tmr=0,gcol="ty",gg="stage",gzi=1,hide=false,ed=null;
-const closed={};
+let tm=0,modalOpen=false,pending=null,view="room",ftype="all",fst="all",fx="all",qq="",us=null,tmr=0,gcol="ty",gg="stage",gzi=1,hide=false,ed=null;
+const closed={};let ME="";try{ME=localStorage.getItem("nh_me")||""}catch(e){}
 function lsSave(){try{localStorage.setItem("nh_state",JSON.stringify(S))}catch(e){}}
 let DB_URL="",CODE="",es=null,remote=null;
 function readCfg(){try{const x=location.hash,c=x.match(/[#&]c=([A-Za-z0-9_-]{12,})/),d=x.match(/[#&]d=([^&]+)/);
@@ -225,12 +233,10 @@ async function pushDb(){
   try{const r=await fetch(dbUrl(),{method:"PUT",body:JSON.stringify({t:S.t,s:JSON.stringify(S)})});if(!r.ok)throw 0;sync("נשמר ומשותף")}catch(e){sync("נשמר במכשיר, ממתין לחיבור")}
 }
 function persist(){S.t=Date.now();lsSave();clearTimeout(tm);tm=setTimeout(pushDb,600)}
+function applyRemote(r){const m=merge(S,norm(r)),ch=sig(m)!==sig(S),up=sig(m)!==sig(r);S=m;if(ch){lsSave();render()}if(up){S.t=Date.now();lsSave();pushDb()}}
 function onRemote(v){
   if(!v||!v.s){if(S.t>0)pushDb();sync("מסונכרן");return}
-  try{const r=JSON.parse(v.s);
-    if(r.t>S.t){if(modalOpen)pending=r;else{S=norm(r);lsSave();render()}}
-    else if(r.t<S.t)pushDb();
-  }catch(e){}
+  try{const r=JSON.parse(v.s);if(modalOpen)pending=r;else applyRemote(r)}catch(e){}
   sync("מסונכרן");
 }
 function connect(){
@@ -255,7 +261,12 @@ function openSetup(){
   $("s_ok").onclick=()=>{const c=$("s_code").value.trim(),d=$("s_url").value.trim();
     if(!/^[A-Za-z0-9_-]{12,}$/.test(c)){$("s_msg").textContent="הקוד צריך להכיל לפחות 12 תווים (אותיות באנגלית, ספרות, - או _)";return}
     if(!/^https:\/\/[\w.-]+\.(firebaseio\.com|firebasedatabase\.app)\/?$/.test(d)){$("s_msg").textContent="כתובת מסד הנתונים לא נראית תקינה";return}
-    setCfg(c,d);$("ov2").classList.remove("on")};
+    setCfg(c,d);$("ov2").classList.remove("on");if(!ME)openWho()};
+  $("ov2").classList.add("on")}
+function openWho(){
+  $("sh2").innerHTML='<h2>איך קוראים לך?</h2><div class="m" style="font-size:14px;line-height:1.5;margin:6px 0">השם משמש לשיוך משימות ולכרטיס ״המשימות שלי״. כל אחד מכם מזין את שמו בטלפון שלו.</div><input id="w_n" placeholder="השם שלך" value="'+esc(ME)+'"><div class="row"><button class="pri" id="w_ok">שמור</button><button id="w_x">אחר כך</button></div>';
+  $("w_ok").onclick=()=>{const v=$("w_n").value.trim();if(v){ME=v;try{localStorage.setItem("nh_me",v)}catch(e){}}$("ov2").classList.remove("on");render()};
+  $("w_x").onclick=()=>$("ov2").classList.remove("on");
   $("ov2").classList.add("on")}
 function openShare(){
   if(!cfgOk()){openSetup();return}
@@ -273,32 +284,21 @@ function meta(t){
   const cls=t.s==="X"?"sd":"FOD".includes(t.s)?"sw":t.s==="N"?"":"si";
   a.push('<button class="b st '+cls+'" data-s="'+t.id+'">'+SN[t.s]+" ▾</button>");
   if(view!=="room")a.push("<span>"+esc(t.room)+"</span>");
-  if(view==="trade")a.push("<span>"+esc(ST[t.stage])+"</span>");
   if(view!=="trade"&&t.type==="b"&&t.trade)a.push("<span>"+esc(t.trade)+"</span>");
+  if(t.w)a.push("<span>👤 "+esc(t.w)+"</span>");
   if(f.start||f.end)a.push('<span class="'+(late(t)?"w":"")+'">📅 '+(f.start?fds(f.start):"")+(f.start&&f.end&&f.start!==f.end?"–":"")+(f.end&&f.end!==f.start?fds(f.end):"")+"</span>");
-  if(f.phone)a.push('<a href="tel:'+esc(f.phone.replace(/[^0-9+]/g,""))+'">📞</a>');
+  if(f.phone&&view!=="trade")a.push('<a href="tel:'+esc(f.phone.replace(/[^0-9+]/g,""))+'">📞</a>');
   return a.join("");
 }
 function late(t){const f=t.f||{},d=f.end||f.start;return !t.done&&!!d&&d<tl()}
 function soon(t){const f=t.f||{},d=f.start;if(t.done||!d)return false;const n=DN(d)-DN(tl());return n>=0&&n<=7}
-function pass(t){return (ftype==="all"||t.type===ftype)&&(fst==="all"||t.s===fst)&&(fx==="all"||(fx==="late"?late(t):soon(t)))&&!(hide&&t.done)&&(!qq||(t.text+" "+t.room+" "+(t.trade||"")+" "+((t.f||{}).name||"")).toLowerCase().includes(qq))}
+function pass(t){return (ftype==="all"||t.type===ftype)&&(fst==="all"||t.s===fst)&&(fx==="all"||(fx==="late"?late(t):fx==="soon"?soon(t):t.w===ME))&&!(hide&&t.done)&&(!qq||(t.text+" "+t.room+" "+(t.trade||"")+" "+((t.f||{}).name||"")).toLowerCase().includes(qq))}
 function cards(){
   const L=S.tasks,c={F:0,O:0,D:0};L.forEach(t=>{if(!t.done&&c[t.s]!=null)c[t.s]++});
-  const it=[["sF","צריך למצוא בעל מקצוע",c.F],["sO","צריך להזמין / לקנות",c.O],["sD","צריך לקבוע תאריך",c.D],["xlate","באיחור",L.filter(late).length],["xsoon","ב-7 הימים הקרובים",L.filter(soon).length]].filter(i=>i[2]>0);
+  const it=[["sF","צריך למצוא בעל מקצוע",c.F],["sO","צריך להזמין / לקנות",c.O],["sD","צריך לקבוע תאריך",c.D],["xlate","באיחור",L.filter(late).length],["xsoon","ב-7 הימים הקרובים",L.filter(soon).length],["xmine","המשימות שלי",ME?L.filter(t=>!t.done&&t.w===ME).length:0]].filter(i=>i[2]>0);
   return it.length?'<div class="cards">'+it.map(i=>'<button class="card'+((i[0][0]==="s"?fst:fx)===i[0].slice(1)?" on":"")+(i[0]==="xlate"?" lw":"")+'" data-card="'+i[0]+'"><b>'+i[2]+"</b><span>"+i[1]+"</span></button>").join("")+"</div>":""}
 async function copyTxt(t,b){let ok=false;try{await navigator.clipboard.writeText(t);ok=true}catch(e){try{const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,99999);ok=document.execCommand("copy");ta.remove()}catch(x){}}const o=b.textContent;b.textContent=ok?(o.length>2?"✓ הועתק, הדבק בחייגן":"✓"):"לא הצלחתי להעתיק";setTimeout(()=>{b.textContent=o},3000)}
 function wa(ph){let d=String(ph).replace(/\D/g,"");if(d.startsWith("00"))d=d.slice(2);else if(d.startsWith("0"))d="972"+d.slice(1);return "https://wa.me/"+d}
-function people(){
-  const m=$("main"),g=new Map();
-  S.tasks.filter(pass).forEach(t=>{const f=t.f||{};if(!f.name)return;const k=f.name.trim();if(!g.has(k))g.set(k,{n:k,ph:"",tr:new Set(),ts:[]});const c=g.get(k);if(f.phone&&!c.ph)c.ph=f.phone;if(t.type==="b"&&t.trade)c.tr.add(t.trade);c.ts.push(t)});
-  const miss=S.tasks.filter(t=>t.type==="b"&&!t.done&&!(t.f||{}).name).length;
-  let h=miss?'<div class="m" style="padding:0 2px 10px">'+miss+" משימות של בעל מקצוע עדיין בלי שם איש קשר</div>":"";
-  [...g.values()].sort((a,b)=>a.n.localeCompare(b.n,"he")).forEach(c=>{
-    h+='<div class="pc"><div class="pn"><b>'+esc(c.n)+"</b>"+(c.tr.size?'<span class="b">'+[...c.tr].map(esc).join(", ")+"</span>":"")+"</div>"+
-      (c.ph?'<div class="pa"><a class="pb" href="tel:'+esc(c.ph.replace(/[^0-9+]/g,""))+'">📞 '+esc(c.ph)+'</a><a class="pb" target="_blank" rel="noopener" href="'+esc(wa(c.ph))+'">💬 וואטסאפ</a></div>':'<div class="pa">אין טלפון</div>')+
-      c.ts.map(t=>'<div class="pt'+(t.done?" d":"")+'" data-e="'+t.id+'"><span class="l">'+esc(t.text)+'</span><button class="b st '+(t.s==="X"?"sd":"FOD".includes(t.s)?"sw":t.s==="N"?"":"si")+'" data-s="'+t.id+'">'+SN[t.s]+" ▾</button></div>").join("")+"</div>"});
-  m.innerHTML=h||'<div class="empty">אין עדיין אנשי קשר.<br>הוסף שם וטלפון בפרטים של משימה.</div>';
-}
 function csvOf(){
   const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
   const hd=["חדר","שלב","משימה","סוג","סטטוס","תחום","שם","טלפון","תאריך התחלה","תאריך סיום","קישור","אסמכתא","הערות"];
@@ -308,53 +308,64 @@ async function saveOut(name,text,box){
   try{const b=new Blob([text],{type:name.endsWith(".csv")?"text/csv;charset=utf-8":"application/json"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);box.textContent="✓ הקובץ יורד";return}catch(e){}
   box.innerHTML='ההורדה לא זמינה כאן. סמן והעתק את הטקסט:<textarea readonly rows="6"></textarea>';box.querySelector("textarea").value=text}
 function openMenu(){
-  $("sh2").innerHTML='<h2>שיתוף וגיבוי</h2><button class="qs" id="m_s">🔗 שיתוף עם בן/בת הזוג</button><button class="qs" id="m_j">⬇ הורד גיבוי (JSON)</button><button class="qs" id="m_c">⬇ ייצוא לטבלה (CSV)</button><label class="qs" style="cursor:pointer">⬆ שחזור מגיבוי<input type="file" id="m_f" accept=".json,application/json" hidden></label><div id="m_o" style="font-size:13px;color:var(--mute);margin-top:8px"></div><div class="m" style="margin-top:10px">גרסה 4</div>';
+  $("sh2").innerHTML='<h2>שיתוף וגיבוי</h2><button class="qs" id="m_s">🔗 שיתוף עם בן/בת הזוג</button><button class="qs" id="m_w">👤 השם שלי: '+esc(ME||"לא הוגדר")+'</button><button class="qs" id="m_j">⬇ הורד גיבוי (JSON)</button><button class="qs" id="m_c">⬇ ייצוא לטבלה (CSV)</button><label class="qs" style="cursor:pointer">⬆ שחזור מגיבוי<input type="file" id="m_f" accept=".json,application/json" hidden></label><div id="m_o" style="font-size:13px;color:var(--mute);margin-top:8px"></div><div class="m" style="margin-top:10px">גרסה 5</div>';
   const o=$("m_o");
-  $("m_s").onclick=openShare;
+  $("m_s").onclick=openShare;$("m_w").onclick=openWho;
   $("m_j").onclick=()=>saveOut("new-house-backup.json",JSON.stringify({app:"nh",v:1,exported:new Date().toISOString(),tasks:S.tasks},null,1),o);
   $("m_c").onclick=()=>saveOut("new-house-tasks.csv",csvOf(),o);
-  $("m_f").onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j||!Array.isArray(j.tasks)||!j.tasks.every(t=>t&&typeof t.text==="string"&&t.id!=null&&TY[t.type]))throw 0;snap("הגיבוי שוחזר");S=norm({t:0,tasks:j.tasks});persist();$("ov2").classList.remove("on");render()}catch(x){o.textContent="הקובץ לא תקין"}};r.readAsText(f)};
+  $("m_f").onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j||!Array.isArray(j.tasks)||!j.tasks.every(t=>t&&typeof t.text==="string"&&t.id!=null&&TY[t.type]))throw 0;snap("הגיבוי שוחזר");const n=Date.now(),del={...S.del};S.tasks.forEach(t=>{if(!j.tasks.some(x=>x.id===t.id))del[t.id]=n});j.tasks.forEach(t=>t.u=n);S=norm({t:0,tasks:j.tasks,del});persist();$("ov2").classList.remove("on");render()}catch(x){o.textContent="הקובץ לא תקין"}};r.readAsText(f)};
   $("ov2").classList.add("on")}
 $("mn").onclick=openMenu;
-function note(m){$("tt").textContent=m;$("tu").style.display="none";$("toast").style.whiteSpace="normal";$("toast").style.maxWidth="85%";$("toast").hidden=false;clearTimeout(tmr);tmr=setTimeout(()=>{$("toast").hidden=true;$("tu").style.display="";$("toast").style.whiteSpace=""},14000)}
-function snap(m){us=JSON.stringify(S.tasks);$("tt").textContent=m;$("tu").style.display="";$("toast").style.whiteSpace="";$("toast").hidden=false;clearTimeout(tmr);tmr=setTimeout(()=>{$("toast").hidden=true},6000)}
-$("tu").onclick=()=>{if(us){S.tasks=JSON.parse(us);us=null;persist();render()}$("toast").hidden=true};
+function snap(m){us=JSON.stringify({tasks:S.tasks,del:S.del});$("tt").textContent=m;$("tu").style.display="";$("toast").style.whiteSpace="";$("toast").hidden=false;clearTimeout(tmr);tmr=setTimeout(()=>{$("toast").hidden=true},6000)}
+$("tu").onclick=()=>{if(us){const p=JSON.parse(us),cur=new Map(S.tasks.map(t=>[t.id,JSON.stringify(t)])),n=Date.now();p.tasks.forEach(t=>{if(cur.get(t.id)!==JSON.stringify(t)){t.u=n;delete p.del[t.id]}});S.tasks.forEach(t=>{if(!p.tasks.some(x=>x.id===t.id))p.del[t.id]=n});S.tasks=p.tasks;S.del=p.del;us=null;persist();render()}$("toast").hidden=true};
 function openQs(id){
   const t=S.tasks.find(x=>x.id===id);if(!t)return;
   $("sh2").innerHTML="<h2>"+esc(t.text)+"</h2>"+SL.filter(x=>sok(x[0],t.type)).map(x=>'<button class="qs'+(t.s===x[0]?" on":"")+'" data-v="'+x[0]+'">'+x[1]+"</button>").join("");
-  $("sh2").querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{const v=b.dataset.v;if(v!==t.s){snap("הסטטוס עודכן");if(v==="X")t.ps=t.s;t.s=v;t.done=v==="X";persist()}$("ov2").classList.remove("on");render()});
+  $("sh2").querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{const v=b.dataset.v;if(v!==t.s){snap("הסטטוס עודכן");if(v==="X")t.ps=t.s;t.s=v;t.done=v==="X";t.u=Date.now();persist()}$("ov2").classList.remove("on");render()});
   $("ov2").classList.add("on")}
 $("ov2").addEventListener("click",e=>{if(e.target===$("ov2"))$("ov2").classList.remove("on")});
 $("q").oninput=e=>{qq=e.target.value.trim().toLowerCase();render()};
 $("ft").onclick=()=>{$("fp").hidden=!$("fp").hidden};
 function btns(el,items,cur,fn){el.innerHTML="";items.forEach(([k,l])=>{const b=document.createElement("button");b.textContent=l;if(k===cur)b.className="on";b.onclick=()=>fn(k);el.appendChild(b)})}
+const RI={"כללי":"🏠","מנהלה":"📋","מטבח":"🍳","סלון ופינת אוכל":"🛋️","שירותי אורחים":"🚽","שירותי ילדים":"🚿","שירותי הורים":"🚿","חדר הורים":"🛏️","חדר שקד":"🧸","משרד":"💼","חדר כביסה":"🧺","חוץ ומרפסת":"🌳"};
+function row(t){return '<div class="t'+(t.done?" d":"")+'"><label class="ck"><input type="checkbox" data-c="'+t.id+'"'+(t.done?" checked":"")+'></label><div class="x" data-e="'+t.id+'"><span class="tx">'+esc(t.text)+'</span><div class="m">'+meta(t)+"</div></div></div>"}
+function det(id,sum,body,open){const el=document.createElement("details");el.open=closed[id]===undefined?open:!closed[id];el.addEventListener("toggle",()=>{closed[id]=!el.open});el.innerHTML=sum+body;$("main").appendChild(el)}
+function grp(k,ts){
+  const dn=ts.filter(t=>t.done),todo=ts.filter(t=>!t.done),p=Math.round(dn.length/ts.length*100);
+  const ttl=view==="room"?(RI[k]||"📁")+" "+esc(k):view==="trade"?"🔧 "+esc(k):esc(k);
+  let pp="";
+  if(view==="trade"){const mp=new Map();ts.forEach(t=>{const f=t.f||{};if(f.name&&(f.phone||!mp.get(f.name)))mp.set(f.name,f.phone||"")});
+    if(mp.size)pp='<div class="pp">'+[...mp].map(([n,ph])=>"<span>👤 "+esc(n)+"</span>"+(ph?'<a href="tel:'+esc(ph.replace(/[^0-9+]/g,""))+'">📞 '+esc(ph)+'</a><a target="_blank" rel="noopener" href="'+esc(wa(ph))+'">💬</a>':"")).join("")+"</div>"}
+  det(view+"|"+k,'<summary class="'+(dn.length===ts.length?"full":"")+'"><span>'+ttl+'</span><i class="gp"><b style="width:'+p+'%"></b></i><small>'+dn.length+"/"+ts.length+'</small><button class="qa" data-qa="'+esc(k)+'" aria-label="הוסף משימה">＋</button></summary>',
+    pp+todo.map(row).join("")+(dn.length?'<details class="dn"><summary>בוצעו ('+dn.length+")</summary>"+dn.map(row).join("")+"</details>":""),dn.length<ts.length)}
+function agenda(){
+  const m=$("main"),today=DN(tl()),B=[["late","⚠️ באיחור"],["today","📍 היום"],["week","📅 ב-7 הימים הקרובים"],["month","🗓️ בחודש הקרוב"],["later","⏳ מאוחר יותר"],["none","❔ בלי תאריך"]],g={};
+  S.tasks.filter(t=>!t.done&&pass(t)).forEach(t=>{const r=sch(t);let b,k=1e9;
+    if(!r)b="none";else{k=r[0];if(late(t))b="late";else if(r[0]<=today&&r[1]>=today)b="today";else{const n=r[0]-today;b=n<=7?"week":n<=30?"month":"later"}}
+    (g[b]=g[b]||[]).push([k,t])});
+  m.innerHTML=cards();let any=false;
+  B.forEach(([b,l])=>{const ts=(g[b]||[]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);if(!ts.length)return;any=true;
+    det("ag|"+b,"<summary><span>"+l+"</span><small>"+ts.length+"</small></summary>",ts.map(row).join(""),b!=="none"&&b!=="later")});
+  if(!any)m.insertAdjacentHTML("beforeend",'<div class="empty">אין משימות פתוחות 🎉</div>');
+}
 function render(){
-  btns($("seg"),[["room","לפי חדר"],["stage","לפי שלב"],["trade","לפי מקצוע"],["people","אנשי קשר"],["gantt","גאנט"]],view,k=>{view=k;render()});
+  btns($("seg"),[["room","לפי חדר"],["stage","לפי שלב"],["trade","בעלי מקצוע"],["agenda","לוח זמנים"],["gantt","גאנט"]],view,k=>{view=k;render()});
   btns($("chips"),[["all","הכול"],...Object.entries(TY)],ftype,k=>{ftype=k;render()});
   btns($("chips2"),[["all","כל הסטטוסים"],...SL.map(x=>[x[0],x[1]])],fst,k=>{fst=k;render()});
   $("ft").textContent="סינון"+((ftype!=="all"||fst!=="all"||hide)?" •":"");
-  const all=S.tasks,dn=all.filter(t=>t.done).length;
+  const all=S.tasks,dn=all.filter(t=>t.done).length,opt=a=>[...new Set(a.filter(Boolean))].map(r=>'<option value="'+esc(r)+'">').join("");
   $("pt").textContent=dn+"/"+all.length;$("pp").textContent=Math.round(dn/(all.length||1)*100)+"%";$("pb").style.width=(dn/(all.length||1)*100)+"%";
-  $("rooms").innerHTML=[...new Set(all.map(t=>t.room))].map(r=>'<option value="'+esc(r)+'">').join("");
-  $("trades").innerHTML=[...new Set(all.map(t=>t.trade).filter(Boolean))].map(r=>'<option value="'+esc(r)+'">').join("");
-  $("names").innerHTML=[...new Set(all.map(t=>(t.f||{}).name).filter(Boolean))].map(r=>'<option value="'+esc(r)+'">').join("");
+  $("rooms").innerHTML=opt(all.map(t=>t.room));$("trades").innerHTML=opt(all.map(t=>t.trade));$("names").innerHTML=opt(all.map(t=>(t.f||{}).name));$("whos").innerHTML=opt([ME,...all.map(t=>t.w)]);
   if(view==="gantt"){gantt();return}
-  if(view==="people"){people();return}
+  if(view==="agenda"){agenda();return}
   const g=new Map();
   all.filter(pass).forEach(t=>{const k=keyOf(t);if(!g.has(k))g.set(k,[]);g.get(k).push(t)});
   const keys=[...g.keys()];
   if(view==="stage")keys.sort((a,b)=>parseInt(a)-parseInt(b));
   if(view==="trade")keys.sort((a,b)=>a===NONE?1:b===NONE?-1:a.localeCompare(b,"he"));
-  const m=$("main");m.innerHTML=cards();
-  if(!keys.length){m.insertAdjacentHTML("beforeend",'<div class="empty">אין משימות להצגה 🎉</div>');return}
-  keys.forEach(k=>{
-    const ts=g.get(k),d=ts.filter(t=>t.done).length,id=view+"|"+k;
-    const el=document.createElement("details");el.open=!closed[id];
-    el.addEventListener("toggle",()=>{closed[id]=!el.open});
-    el.innerHTML='<summary class="'+(d===ts.length?"full":"")+'"><span>'+esc(k)+"</span><small>"+d+"/"+ts.length+"</small></summary>"+
-      ts.map(t=>'<div class="t'+(t.done?" d":"")+'"><label class="ck"><input type="checkbox" data-c="'+t.id+'"'+(t.done?" checked":"")+'></label><div class="x" data-e="'+t.id+'"><span class="tx">'+esc(t.text)+'</span><div class="m">'+meta(t)+"</div></div></div>").join("");
-    m.appendChild(el);
-  });
+  $("main").innerHTML=cards();
+  if(!keys.length){$("main").insertAdjacentHTML("beforeend",'<div class="empty">אין משימות להצגה 🎉</div>');return}
+  keys.forEach(k=>grp(k,g.get(k)));
 }
 function tl(){const n=new Date(),p=x=>String(x).padStart(2,"0");return n.getFullYear()+"-"+p(n.getMonth()+1)+"-"+p(n.getDate())}
 const DAYMS=86400000,DN=s=>Math.floor(Date.parse(s)/DAYMS);
@@ -386,11 +397,11 @@ function gantt(){
   }else m.innerHTML='<div class="empty">אין עדיין משימות עם תאריכים.<br>לחץ על משימה ברשימה למטה והוסף תאריך התחלה וסיום.</div>';
   if(un.length){const d=document.createElement("details");d.open=!sc.length;d.innerHTML='<summary><span>ללא תאריכים</span><small>'+un.length+"</small></summary>"+un.map(t=>'<div class="t"><div class="x" data-e="'+t.id+'"><span class="tx">'+esc(t.text)+'</span><div class="m"><span>'+esc(t.room)+"</span></div></div></div>").join("");m.appendChild(d)}
 }
-$("main").addEventListener("change",e=>{const id=e.target.dataset&&e.target.dataset.c;if(id==null)return;const t=S.tasks.find(x=>x.id===+id);if(t){snap(e.target.checked?"סומן כבוצע":"הסימון בוטל");if(e.target.checked){t.ps=t.s;t.s="X"}else t.s=t.ps&&t.ps!=="X"?t.ps:"N";t.done=e.target.checked;persist();render()}});
+$("main").addEventListener("change",e=>{const id=e.target.dataset&&e.target.dataset.c;if(id==null)return;const t=S.tasks.find(x=>x.id===+id);if(t){snap(e.target.checked?"סומן כבוצע":"הסימון בוטל");if(e.target.checked){t.ps=t.s;t.s="X"}else t.s=t.ps&&t.ps!=="X"?t.ps:"N";t.done=e.target.checked;t.u=Date.now();persist();render()}});
 $("main").addEventListener("click",e=>{
   const c=e.target.closest("[data-card]");
   if(c){const k=c.dataset.card,v=k.slice(1);if(k[0]==="s")fst=fst===v?"all":v;else fx=fx===v?"all":v;render();return}
-  const cp=e.target.closest("[data-cp]");if(cp){copyTxt(cp.dataset.cp,cp);return}
+  const qa=e.target.closest("[data-qa]");if(qa){e.preventDefault();const k=qa.dataset.qa;openEd(null,view==="room"?{room:k}:view==="stage"?{stage:parseInt(k)}:k!==NONE?{type:"b",trade:k}:{});return}
   const q=e.target.closest("[data-s]");if(q){openQs(+q.dataset.s);return}
   if(e.target.closest("a"))return;const x=e.target.closest("[data-e]");if(x)openEd(+x.dataset.e)});
 $("hd").addEventListener("change",e=>{hide=e.target.checked;render()});
@@ -400,7 +411,7 @@ $("ov").addEventListener("click",e=>{if(e.target===$("ov"))closeEd()});
 function collect(){
   const sh=$("sh");
   ed.text=sh.querySelector("#e_text").value;ed.room=sh.querySelector("#e_room").value;
-  ed.stage=+sh.querySelector("#e_stage").value;ed.type=sh.querySelector("#e_type").value;const es=sh.querySelector("#e_stat");if(es&&es.value)ed.s=es.value;
+  ed.stage=+sh.querySelector("#e_stage").value;ed.type=sh.querySelector("#e_type").value;const es=sh.querySelector("#e_stat");if(es&&es.value)ed.s=es.value;const ew=sh.querySelector("#e_who");if(ew)ed.w=ew.value.trim();
   sh.querySelectorAll("[data-k]").forEach(i=>{const k=i.dataset.k;if(k==="trade")ed.trade=i.value;else ed.f[k]=i.value});
 }
 function dyn(){
@@ -408,35 +419,16 @@ function dyn(){
     const v=k==="trade"?ed.trade:ed.f[k];
     const inp=ty==="area"?'<textarea rows="3" data-k="'+k+'">'+esc(v)+"</textarea>":'<input data-k="'+k+'" type="'+ty+'" value="'+esc(v)+'"'+(li?' list="'+li+'"':"")+">";
     return "<label>"+l+"</label>"+inp}).join("");
-  if(FD[ed.type].some(x=>x[0]==="phone")){
-    const box=document.createElement("div"),msg=document.createElement("div");msg.className="m";msg.style.margin="6px 0";
-    const put=(nm,ph)=>{const n=$("dyn").querySelector('[data-k="name"]'),p=$("dyn").querySelector('[data-k="phone"]');
-      if(ph&&p){p.value=ph;p.dispatchEvent(new Event("change",{bubbles:true}))}
-      if(nm&&n){n.value=nm;n.dispatchEvent(new Event("change",{bubbles:true}))}
-      msg.textContent="✓ "+[nm,ph].filter(Boolean).join(" · ")+" (לחץ ״שמור״ כדי לשמור)"};
-    if(navigator.contacts&&navigator.contacts.select){
-      let pm=true;const b=document.createElement("button");b.className="cal";b.textContent="📇 בחר מאנשי הקשר";
-      b.onclick=async()=>{msg.textContent="…";try{localStorage.setItem("nh_pickctx",String(Date.now()))}catch(e){}try{const r=await navigator.contacts.select(["name","tel"],{multiple:pm});
-        if(!r||!r.length){pm=!pm;msg.textContent="לא נבחר איש קשר (החלון החזיר רשימה ריקה). לחץ שוב על הכפתור, הפעם בשיטת בחירה אחרת. בחר איש קשר כך שיופיע לידו סימן ✓ ורק אז לחץ ״בוצע״.";return}
-        const c=r[0],nm=((c.name&&c.name[0])||"").trim(),ph=((c.tel&&c.tel[0])||"").trim();
-        if(!nm&&!ph){msg.textContent="לא התקבלו שם או טלפון מאיש הקשר";return}
-        put(nm,ph)}catch(e){msg.textContent="שגיאה: "+((e&&e.name)||"")+" "+((e&&e.message)||"")}finally{try{localStorage.removeItem("nh_pickctx")}catch(e){}}};
-      box.appendChild(b)}
-    const pb=document.createElement("button");pb.className="cal";pb.textContent="📋 הדבק שם וטלפון מהלוח";
-    pb.onclick=async()=>{let t="";try{t=await navigator.clipboard.readText()}catch(e){t=prompt("הדבק כאן שם וטלפון")||""}
-      const m=t.match(/(?:\+?972|0)[\d\s-]{8,12}\d/);if(!m){msg.textContent="לא נמצא מספר טלפון בטקסט שהודבק";return}
-      const nm=t.replace(m[0],"").replace(/[\n\r,;:]+/g," ").trim();put(nm.length<=40?nm:"",m[0].trim())};
-    box.appendChild(pb);box.appendChild(msg);$("dyn").prepend(box)}
 }
 function fillSt(){const sel=$("e_stat");if(!sok(ed.s,ed.type))ed.s="N";sel.innerHTML=SL.filter(x=>sok(x[0],ed.type)).map(x=>'<option value="'+x[0]+'"'+(ed.s===x[0]?" selected":"")+">"+x[1]+"</option>").join("")}
-function openEd(id){
+function openEd(id,pre){
   const src=id==null?null:S.tasks.find(t=>t.id===id);
-  ed=src?JSON.parse(JSON.stringify(src)):{id:null,room:"כללי",stage:1,type:"b",trade:"",text:"",done:false,s:"N",f:{}};
-  ed.f=ed.f||{};modalOpen=true;
+  ed=src?JSON.parse(JSON.stringify(src)):{id:null,room:"כללי",stage:1,type:"b",trade:"",text:"",done:false,s:"N",w:"",u:0,f:{}};
+  if(!src&&pre)Object.assign(ed,pre);ed.f=ed.f||{};modalOpen=true;
   const more=ed.trade||Object.keys(ed.f).some(k=>k!=="start"&&k!=="end"&&ed.f[k]);
   $("sh").innerHTML="<h2>"+(src?"פרטי משימה":"משימה חדשה")+'</h2><label>משימה</label><input id="e_text" value="'+esc(ed.text)+'">'+
     '<label>חדר / מקום</label><input id="e_room" list="rooms" value="'+esc(ed.room)+'">'+
-    '<label>סטטוס</label><select id="e_stat"></select>'+
+    '<div class="two"><div><label>סטטוס</label><select id="e_stat"></select></div><div><label>אחראי</label><input id="e_who" list="whos" value="'+esc(ed.w)+'" placeholder="מי אחראי?"></div></div>'+
     '<div class="two"><div><label>סוג</label><select id="e_type">'+Object.entries(TY).map(([k,l])=>'<option value="'+k+'"'+(ed.type===k?" selected":"")+">"+l+"</option>").join("")+'</select></div><div><label>שלב</label><select id="e_stage">'+ST.slice(1).map((s,i)=>'<option value="'+(i+1)+'"'+(ed.stage===i+1?" selected":"")+">"+(i+1)+". "+s+"</option>").join("")+"</select></div></div>"+
     '<div class="two"><div><label>תאריך התחלה</label><input type="date" data-k="start" value="'+esc(ed.f.start)+'"></div><div><label>תאריך סיום</label><input type="date" data-k="end" value="'+esc(ed.f.end)+'"></div></div>'+
     '<a class="cal" id="e_cal" target="_blank" rel="noopener">📅 הוסף ליומן</a>'+
@@ -461,24 +453,22 @@ function openEd(id){
   $("e_cal").onclick=ev=>{const u=calUrl();if(!u){ev.preventDefault();$("e_cal").textContent="קבע קודם תאריך התחלה";return}$("e_cal").href=u};
   $("e_save").onclick=()=>{
     collect();ed.text=ed.text.trim();if(!ed.text){$("e_text").focus();return}
-    ed.room=ed.room.trim()||"כללי";ed.done=ed.s==="X";snap(ed.id==null?"המשימה נוספה":"השינויים נשמרו");
-    if(ed.id==null){ed.id=S.tasks.reduce((m,t)=>Math.max(m,t.id),-1)+1;S.tasks.push(ed)}
+    ed.room=ed.room.trim()||"כללי";ed.done=ed.s==="X";ed.u=Date.now();snap(ed.id==null?"המשימה נוספה":"השינויים נשמרו");
+    if(ed.id==null){ed.id=Date.now()*1000+Math.floor(Math.random()*1000);S.tasks.push(ed)}
     else{const i=S.tasks.findIndex(t=>t.id===ed.id);if(i>=0)S.tasks[i]=ed}
     persist();closeEd();
   };
   if(src){const b=$("e_del");b.onclick=()=>{
-    if(b.dataset.s){snap("המשימה נמחקה");S.tasks=S.tasks.filter(t=>t.id!==ed.id);persist();closeEd()}
+    if(b.dataset.s){snap("המשימה נמחקה");S.del[ed.id]=Date.now();S.tasks=S.tasks.filter(t=>t.id!==ed.id);persist();closeEd()}
     else{b.dataset.s=1;b.textContent="לחץ שוב למחיקה"}}}
   $("ov").classList.add("on");
 }
 function closeEd(){
   $("ov").classList.remove("on");modalOpen=false;
-  if(pending&&pending.t>S.t){S=norm(pending);lsSave()}
-  pending=null;ed=null;render();
+  const pe=pending;pending=null;ed=null;if(pe)applyRemote(pe);render();
 }
 render();
-try{const pc=localStorage.getItem("nh_pickctx");if(pc){localStorage.removeItem("nh_pickctx");if(Date.now()-(+pc)<600000)setTimeout(()=>note("הדף נטען מחדש בזמן בחירת איש הקשר, ולכן הבחירה אבדה. אפשר להעתיק את המספר מאנשי הקשר ולהשתמש בכפתור ״הדבק שם וטלפון מהלוח״."),900)}}catch(e){}
-if(!CODE||!DB_URL)setTimeout(openSetup,500);
+if(!CODE||!DB_URL)setTimeout(openSetup,500);else if(!ME)setTimeout(openWho,500);
 connect();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
